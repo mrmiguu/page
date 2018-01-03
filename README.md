@@ -1,2 +1,2 @@
 # page
-HTML + CSS + Go (powered by GopherJS)
+Power your HTML and CSS with Go!
