@@ -79,6 +79,32 @@ func Class(name string) Elem {
 	return elem(js)
 }
 
+func (e *Elem) Value(s ...string) string {
+	if len(s) > 0 {
+		e.setvalue(s[0])
+	}
+	return e.getvalue()
+}
+
+func (e *Elem) setvalue(s string) {
+	for _, elem := range e.elems {
+		elem.Set("value", s)
+	}
+}
+
+func (e Elem) getvalue() string {
+	for _, elem := range e.elems {
+		return elem.Get("value").String()
+	}
+	return ""
+}
+
+func (e *Elem) Disable(b bool) {
+	for _, elem := range e.elems {
+		elem.Set("disabled", b)
+	}
+}
+
 func (e *Elem) Display(s string) {
 	defer crash()
 	for _, elem := range e.elems {

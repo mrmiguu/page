@@ -11,9 +11,9 @@ func init() {
 		panic(err)
 	}
 
-	handshakes := sock.Rbool()
+	date := sock.Rstring()
 
-	for range handshakes {
-		println("a handshake has been made")
+	for d := range date {
+		println(`"` + d + `"`)
 	}
 }
