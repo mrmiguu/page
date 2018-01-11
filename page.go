@@ -6,6 +6,12 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+func crash() {
+	if e, ok := recover().(*js.Error); ok {
+		panic(e)
+	}
+}
+
 func catch(err *error) {
 	if e, ok := recover().(*js.Error); ok {
 		*err = e
@@ -13,36 +19,101 @@ func catch(err *error) {
 }
 
 type Elem struct {
-	js *js.Object
+	elems []*js.Object
+
+	Hit,
+	Link <-chan bool
 }
 
-func Elems(class string) []Elem {
-	elems := []Elem{}
-	arr := js.Global.Get("document").Call("getElementsByClassName", class)
-	for i := 0; i < arr.Length(); i++ {
-		elems = append(elems, Elem{arr.Index(i)})
+func callback() (func(), <-chan bool) {
+	c := make(chan bool)
+	return func() {
+		go func() {
+			select {
+			case c <- true:
+			default:
+			}
+		}()
+	}, c
+}
+
+func elem(elems []*js.Object) Elem {
+	hitfn, hit := callback()
+	link := make(chan bool)
+	for _, e := range elems {
+		e.Call("addEventListener", "click", hitfn)
+
+		id := e.Get("id").String()
+		if len(id) > 0 {
+			id = "#" + id
+		} else {
+			go func() { link <- true }()
+		}
+		js.Global.Get("window").Call("addEventListener", "hashchange", func() {
+			go func() {
+				if hash := js.Global.Get("document").Get("location").Get("hash").String(); id == hash {
+					select {
+					case link <- true:
+					default:
+					}
+				}
+			}()
+		})
 	}
-	return elems
+
+	return Elem{elems, hit, link}
+}
+
+func ID(name string) Elem {
+	defer crash()
+	return elem([]*js.Object{js.Global.Get("document").Call("getElementById", name)})
+}
+
+func Class(name string) Elem {
+	defer crash()
+	arr := js.Global.Get("document").Call("getElementsByClassName", name)
+	var js []*js.Object
+	for i := 0; i < arr.Length(); i++ {
+		js = append(js, arr.Index(i))
+	}
+	return elem(js)
+}
+
+func (e *Elem) Display(s string) {
+	defer crash()
+	for _, elem := range e.elems {
+		elem.Get("style").Set("display", s)
+	}
 }
 
 func (e *Elem) Translate(x, y int) {
 	X, Y := strconv.Itoa(x), strconv.Itoa(y)
-	e.js.Get("style").Set("transform", "translate("+X+"px,"+Y+"px)")
+	for _, elem := range e.elems {
+		elem.Get("style").Set("transform", "translate("+X+"px,"+Y+"px)")
+	}
 }
 
 func (e *Elem) Scale(sx, sy float64) {
 	Sx, Sy := strconv.FormatFloat(sx, 'f', 14, 64), strconv.FormatFloat(sy, 'f', 14, 64)
-	e.js.Get("style").Set("transform", "scale("+Sx+","+Sy+")")
+	for _, elem := range e.elems {
+		elem.Get("style").Set("transform", "scale("+Sx+","+Sy+")")
+	}
 }
 
 func (e *Elem) Rotate(a float64) {
 	A := strconv.FormatFloat(a, 'f', 14, 64)
-	e.js.Get("style").Set("transform", "rotate("+A+"deg)")
+	for _, elem := range e.elems {
+		elem.Get("style").Set("transform", "rotate("+A+"deg)")
+	}
 }
 
 func (e *Elem) Opacity(a float64) {
 	A := strconv.FormatFloat(a, 'f', 14, 64)
-	e.js.Get("style").Set("opacity", A)
+	// c := make(chan bool)
+	for _, elem := range e.elems {
+		// elem.Call("addEventListener", "transitionend", func() { go func() { c <- true }() })
+		elem.Get("style").Set("opacity", A)
+	}
 }
 
 // func ID(id string) (e Elem, err error) {
