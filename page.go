@@ -3,6 +3,8 @@ package page
 import (
 	"strconv"
 
+	"github.com/mrmiguu/page/css"
+
 	"github.com/gopherjs/gopherjs/js"
 )
 
@@ -25,8 +27,8 @@ type Elem struct {
 	Link <-chan bool
 }
 
-func callback() (func(), <-chan bool) {
-	c := make(chan bool)
+func callback(len int) (func(), <-chan bool) {
+	c := make(chan bool, len)
 	return func() {
 		go func() {
 			select {
@@ -38,17 +40,24 @@ func callback() (func(), <-chan bool) {
 }
 
 func elem(elems []*js.Object) Elem {
-	hitfn, hit := callback()
-	link := make(chan bool)
+	hitfn, hit := callback(0)
+	link := make(chan bool, 1)
+
 	for _, e := range elems {
 		e.Call("addEventListener", "click", hitfn)
 
 		id := e.Get("id").String()
 		if len(id) > 0 {
 			id = "#" + id
-		} else {
-			go func() { link <- true }()
 		}
+		hash := js.Global.Get("document").Get("location").Get("hash").String()
+		if id == hash {
+			select {
+			case link <- true:
+			default:
+			}
+		}
+
 		js.Global.Get("window").Call("addEventListener", "hashchange", func() {
 			go func() {
 				if hash := js.Global.Get("document").Get("location").Get("hash").String(); id == hash {
@@ -99,24 +108,78 @@ func (e Elem) getvalue() string {
 	return ""
 }
 
+func (e *Elem) setdisplay(d string) {
+	for _, elem := range e.elems {
+		elem.Get("style").Set("display", d)
+	}
+}
+
+func (e Elem) getdisplay() string {
+	for _, elem := range e.elems {
+		return elem.Get("style").Get("display").String()
+	}
+	return ""
+}
+
 func (e *Elem) Disable(b bool) {
 	for _, elem := range e.elems {
 		elem.Set("disabled", b)
 	}
 }
 
-func (e *Elem) Display(s string) {
+func (e *Elem) Display(d ...css.Display) css.Display {
+	if len(d) > 0 {
+		e.setdisplay(string(d[0]))
+	}
+	return css.Display(e.getdisplay())
+}
+
+func (e *Elem) Position(p css.Position) {
 	defer crash()
 	for _, elem := range e.elems {
-		elem.Get("style").Set("display", s)
+		elem.Get("style").Set("position", p)
 	}
 }
 
-func (e *Elem) Translate(x, y int) {
-	X, Y := strconv.Itoa(x), strconv.Itoa(y)
+func (e *Elem) Animation(name string) {
+	defer crash()
+	fn, c := callback(0)
 	for _, elem := range e.elems {
-		elem.Get("style").Set("transform", "translate("+X+"px,"+Y+"px)")
+		elem.Call("addEventListener", "animationend", fn)
+		elem.Get("style").Set("animation-name", name)
 	}
+	<-c
+}
+
+func (e *Elem) TranslateY(y css.Length) {
+	defer crash()
+	fn, c := callback(0)
+	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
+		elem.Get("style").Set("transform", "translateY("+y+")")
+	}
+	<-c
+}
+func (e *Elem) Translate(x, y css.Length) {
+	defer crash()
+	fn, c := callback(0)
+	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
+		elem.Get("style").Set("transform", "translate("+x+","+y+")")
+	}
+	<-c
+	println("translated.")
+}
+
+func (e *Elem) Move(left, top css.Length) {
+	defer crash()
+	fn, c := callback(0)
+	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
+		elem.Get("style").Set("left", left)
+		elem.Get("style").Set("top", top)
+	}
+	<-c
 }
 
 func (e *Elem) Scale(sx, sy float64) {
@@ -126,11 +189,14 @@ func (e *Elem) Scale(sx, sy float64) {
 	}
 }
 
-func (e *Elem) Rotate(a float64) {
-	A := strconv.FormatFloat(a, 'f', 14, 64)
+func (e *Elem) Rotate(a css.Length) {
+	defer crash()
+	fn, c := callback(0)
 	for _, elem := range e.elems {
-		elem.Get("style").Set("transform", "rotate("+A+"deg)")
+		elem.Call("addEventListener", "transitionend", fn)
+		elem.Get("style").Set("transform", "rotate("+a+")")
 	}
+	<-c
 }
 
 func (e *Elem) Opacity(a float64) {
