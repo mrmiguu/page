@@ -148,12 +148,13 @@ func (e *Elem) Position(p css.Position) {
 	}
 }
 
-func (e *Elem) Animation(name string) {
+func (e *Elem) Animation(name string, t css.Time) {
 	defer crash()
 	fn, c := callback(0)
 	for _, elem := range e.elems {
 		elem.Call("addEventListener", "animationend", fn)
 		elem.Get("style").Set("animation-name", name)
+		elem.Get("style").Set("animation-duration", t)
 	}
 	<-c
 }
@@ -184,6 +185,24 @@ func (e *Elem) Move(left, top css.Length) {
 	for _, elem := range e.elems {
 		elem.Call("addEventListener", "transitionend", fn)
 		elem.Get("style").Set("left", left)
+		elem.Get("style").Set("top", top)
+	}
+	<-c
+}
+func (e *Elem) Left(left css.Length) {
+	defer crash()
+	fn, c := callback(0)
+	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
+		elem.Get("style").Set("left", left)
+	}
+	<-c
+}
+func (e *Elem) Top(top css.Length) {
+	defer crash()
+	fn, c := callback(0)
+	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
 		elem.Get("style").Set("top", top)
 	}
 	<-c
