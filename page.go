@@ -47,10 +47,13 @@ func elem(elems []*js.Object) Elem {
 		e.Call("addEventListener", "click", hitfn)
 
 		id := e.Get("id").String()
-		if len(id) > 0 {
+		if id != "#" && len(id) > 0 {
 			id = "#" + id
 		}
 		hash := js.Global.Get("document").Get("location").Get("hash").String()
+		if len(hash) == 0 {
+			hash = "#"
+		}
 		if id == hash {
 			select {
 			case link <- true:
@@ -60,7 +63,11 @@ func elem(elems []*js.Object) Elem {
 
 		js.Global.Get("window").Call("addEventListener", "hashchange", func() {
 			go func() {
-				if hash := js.Global.Get("document").Get("location").Get("hash").String(); id == hash {
+				hash := js.Global.Get("document").Get("location").Get("hash").String()
+				if len(hash) == 0 {
+					hash = "#"
+				}
+				if id == hash {
 					select {
 					case link <- true:
 					default:
