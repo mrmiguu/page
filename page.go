@@ -210,9 +210,12 @@ func (e *Elem) Top(top css.Length) {
 
 func (e *Elem) Scale(sx, sy float64) {
 	Sx, Sy := strconv.FormatFloat(sx, 'f', 14, 64), strconv.FormatFloat(sy, 'f', 14, 64)
+	fn, c := callback(0)
 	for _, elem := range e.elems {
+		elem.Call("addEventListener", "transitionend", fn)
 		elem.Get("style").Set("transform", "scale("+Sx+","+Sy+")")
 	}
+	<-c
 }
 
 func (e *Elem) Rotate(a css.Length) {
@@ -227,11 +230,12 @@ func (e *Elem) Rotate(a css.Length) {
 
 func (e *Elem) Opacity(a float64) {
 	A := strconv.FormatFloat(a, 'f', 14, 64)
-	// c := make(chan bool)
+	fn, c := callback(0)
 	for _, elem := range e.elems {
-		// elem.Call("addEventListener", "transitionend", func() { go func() { c <- true }() })
+		elem.Call("addEventListener", "transitionend", fn)
 		elem.Get("style").Set("opacity", A)
 	}
+	<-c
 }
 
 // func ID(id string) (e Elem, err error) {
