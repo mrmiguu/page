@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/mrmiguu/page/css"
+	"github.com/mrmiguu/page/html"
 
 	"github.com/gopherjs/gopherjs/js"
 )
@@ -95,11 +96,22 @@ func Class(name string) Elem {
 	return elem(js)
 }
 
-func (e *Elem) Value(s ...string) string {
-	if len(s) > 0 {
-		e.setvalue(s[0])
+func (e *Elem) sethtml(s string) {
+	for _, elem := range e.elems {
+		elem.Set("innerHTML", s)
 	}
-	return e.getvalue()
+}
+func (e Elem) gethtml() string {
+	for _, elem := range e.elems {
+		return elem.Get("innerHTML").String()
+	}
+	return ""
+}
+func (e *Elem) HTML(s ...string) string {
+	if len(s) > 0 {
+		e.sethtml(s[0])
+	}
+	return e.gethtml()
 }
 
 func (e *Elem) setvalue(s string) {
@@ -107,12 +119,17 @@ func (e *Elem) setvalue(s string) {
 		elem.Set("value", s)
 	}
 }
-
 func (e Elem) getvalue() string {
 	for _, elem := range e.elems {
 		return elem.Get("value").String()
 	}
 	return ""
+}
+func (e *Elem) Value(s ...string) string {
+	if len(s) > 0 {
+		e.setvalue(s[0])
+	}
+	return e.getvalue()
 }
 
 func (e *Elem) setdisplay(d string) {
@@ -120,7 +137,6 @@ func (e *Elem) setdisplay(d string) {
 		elem.Get("style").Set("display", d)
 	}
 }
-
 func (e Elem) getdisplay() string {
 	for _, elem := range e.elems {
 		return elem.Get("style").Get("display").String()
@@ -128,10 +144,40 @@ func (e Elem) getdisplay() string {
 	return ""
 }
 
-func (e *Elem) Disable(b bool) {
+func (e *Elem) settype(s string) {
+	for _, elem := range e.elems {
+		elem.Set("type", s)
+	}
+}
+func (e *Elem) gettype() string {
+	for _, elem := range e.elems {
+		return elem.Get("type").String()
+	}
+	return ""
+}
+func (e *Elem) Type(t ...html.Type) html.Type {
+	if len(t) > 0 {
+		e.settype(string(t[0]))
+	}
+	return html.Type(e.gettype())
+}
+
+func (e *Elem) setdisabled(b bool) {
 	for _, elem := range e.elems {
 		elem.Set("disabled", b)
 	}
+}
+func (e *Elem) getdisabled() bool {
+	for _, elem := range e.elems {
+		return elem.Get("disabled").Bool()
+	}
+	return false
+}
+func (e *Elem) Disabled(b ...bool) bool {
+	if len(b) > 0 {
+		e.setdisabled(b[0])
+	}
+	return e.getdisabled()
 }
 
 func (e *Elem) Display(d ...css.Display) css.Display {
